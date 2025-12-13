@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { Plus, Star, Download, Trash2 } from "lucide-react";
+import { Plus, Star, Download, Trash2, Upload, X } from "lucide-react";
+
+interface Review {
+  id: number;
+  pageTitle: string;
+  comment: string;
+  issueType: string;
+  images: string[];
+}
 
 export default function ProjectFeedbackForm() {
   const [projectName, setProjectName] = useState("");
   const [projectType, setProjectType] = useState("");
-  const [reviews, setReviews] = useState([
-    { id: 1, pageTitle: "", comment: "", issueType: "" },
+  const [reviews, setReviews] = useState<Review[]>([
+    { id: 1, pageTitle: "", comment: "", issueType: "", images: [] },
   ]);
   const [generalFeedback, setGeneralFeedback] = useState("");
   const [rating, setRating] = useState(0);
@@ -18,6 +26,7 @@ export default function ProjectFeedbackForm() {
         pageTitle: "",
         comment: "",
         issueType: "",
+        images: [],
       },
     ]);
   };
@@ -32,6 +41,45 @@ export default function ProjectFeedbackForm() {
     setReviews(
       reviews.map((review) =>
         review.id === id ? { ...review, [field]: value } : review
+      )
+    );
+  };
+
+  const handleImageUpload = (
+    reviewId: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = e.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      fileArray.forEach((file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setReviews(
+            reviews.map((review) =>
+              review.id === reviewId
+                ? {
+                    ...review,
+                    images: [...review.images, reader.result as string],
+                  }
+                : review
+            )
+          );
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeImage = (reviewId: number, imageIndex: number) => {
+    setReviews(
+      reviews.map((review) =>
+        review.id === reviewId
+          ? {
+              ...review,
+              images: review.images.filter((_, idx) => idx !== imageIndex),
+            }
+          : review
       )
     );
   };
@@ -140,6 +188,31 @@ export default function ProjectFeedbackForm() {
                   </td>
                 </tr>
               </table>
+
+              ${
+                review.images.length > 0
+                  ? `
+                <div style="margin-top: 15px;">
+                  <div style="font-weight: 600; color: #475569; margin-bottom: 10px;">الصور المرفقة (${
+                    review.images.length
+                  }):</div>
+                  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                    ${review.images
+                      .map(
+                        (img, imgIdx) => `
+                      <div style="border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <img src="${img}" alt="لقطة شاشة ${
+                          imgIdx + 1
+                        }" style="width: 100%; height: auto; display: block;" />
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>
+                </div>
+              `
+                  : ""
+              }
             </div>
           `
             )
@@ -379,6 +452,55 @@ export default function ProjectFeedbackForm() {
                       rows={4}
                       className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all resize-none"
                     />
+                  </div>
+
+                  {/* Image Upload Section */}
+                  <div>
+                    <label className="block text-sm font-semibold text-purple-300 mb-2">
+                      الصور المرفقة (اختياري)
+                    </label>
+
+                    <div className="space-y-3">
+                      {/* Upload Button */}
+                      <label className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:bg-white/10 hover:border-purple-400 transition-all">
+                        <Upload size={20} className="text-purple-300" />
+                        <span className="text-slate-300 font-medium">
+                          رفع صور (لقطات شاشة)
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => handleImageUpload(review.id, e)}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {/* Display Uploaded Images */}
+                      {review.images.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {review.images.map((img, imgIdx) => (
+                            <div
+                              key={imgIdx}
+                              className="relative group rounded-lg overflow-hidden border border-white/20"
+                            >
+                              <img
+                                src={img}
+                                alt={`Screenshot ${imgIdx + 1}`}
+                                className="w-full h-32 object-cover"
+                              />
+                              <button
+                                onClick={() => removeImage(review.id, imgIdx)}
+                                className="absolute top-1 left-1 bg-red-500 hover:bg-red-600 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="حذف الصورة"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
